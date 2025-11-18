@@ -186,9 +186,9 @@ begin
     if Length(tpa) < 10 then  // Skip tiny clusters
       Continue;
 
-    // Get a point to hover over
+    // Get a random point within the rock area
     rect := tpa.MinAreaRect();
-    p := rect.Mean();
+    p := rect.RandomPoint();  // Click random point instead of center
 
     // Move mouse to the rock
     Mouse.Move(p);
