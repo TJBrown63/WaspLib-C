@@ -1,0 +1,126 @@
+{$DEFINE SCRIPT_ID := 'crafting-guild-walker'}
+{$DEFINE SCRIPT_REVISION := '1'}
+{$I SRL-T/osr.simba}
+{$I WaspLib/osr.simba}
+
+(*
+ * Simple Wasp Script - Crafting Guild to Falador Bank Walker
+ *
+ * This script demonstrates basic pathfinding between two locations:
+ * - Crafting Guild: [7128, 3289]
+ * - Falador West Bank: [7177, 2976]
+ *
+ * The script will walk back and forth between these locations.
+ *)
+
+type
+  EState = (
+    WALK_TO_BANK,
+    AT_BANK,
+    WALK_TO_GUILD,
+    AT_GUILD,
+    END_SCRIPT
+  );
+
+  TCraftingGuildWalker = record(TBaseScript)
+    State: EState;
+  end;
+
+procedure TCraftingGuildWalker.Init(maxActions: UInt32; maxTime: UInt64); override;
+begin
+  inherited;
+
+  // Setup the Falador region for the walker
+  Map.SetupChunk(ERSChunk.FALADOR);
+
+  WriteLn('Starting Crafting Guild <-> Falador Bank Walker');
+  WriteLn('Will walk between Crafting Guild and Falador West Bank');
+end;
+
+function TCraftingGuildWalker.GetState(): EState;
+var
+  currentPos: TPoint;
+begin
+  // Check if we should end the script
+  if WL.Activity.IsFinished() then
+    Exit(END_SCRIPT);
+
+  currentPos := RSW.GetMyPos();
+
+  // Check if we're at the bank (within 20 pixels)
+  if currentPos.DistanceTo([7177, 2976]) < 20 then
+  begin
+    WriteLn('Arrived at Falador West Bank!');
+    Exit(AT_BANK);
+  end;
+
+  // Check if we're at the crafting guild (within 20 pixels)
+  if currentPos.DistanceTo([7128, 3289]) < 20 then
+  begin
+    WriteLn('Arrived at Crafting Guild!');
+    Exit(AT_GUILD);
+  end;
+
+  // Determine where to walk based on current position
+  // If closer to bank, we must have just come from guild, so go back to guild
+  // If closer to guild, we must have just come from bank, so go back to bank
+  if currentPos.DistanceTo([7177, 2976]) < currentPos.DistanceTo([7128, 3289]) then
+    Exit(WALK_TO_GUILD)
+  else
+    Exit(WALK_TO_BANK);
+end;
+
+procedure TCraftingGuildWalker.Run(maxActions: UInt32; maxTime: UInt64);
+begin
+  Self.Init(maxActions, maxTime);
+
+  repeat
+    Self.State := Self.GetState();
+    Self.SetAction(ToStr(Self.State));
+
+    case Self.State of
+      WALK_TO_BANK:
+      begin
+        WriteLn('Walking to Falador West Bank...');
+        RSW.WebWalk([7177, 2976], 20);
+        Self.TotalActions := Self.TotalActions + 1;
+      end;
+
+      AT_BANK:
+      begin
+        WriteLn('At bank! Waiting 2 seconds...');
+        Wait(2000);
+        // After waiting at bank, the GetState will decide to walk to guild
+      end;
+
+      WALK_TO_GUILD:
+      begin
+        WriteLn('Walking to Crafting Guild...');
+        RSW.WebWalk([7128, 3289], 20);
+        Self.TotalActions := Self.TotalActions + 1;
+      end;
+
+      AT_GUILD:
+      begin
+        WriteLn('At Crafting Guild! Waiting 2 seconds...');
+        Wait(2000);
+        // After waiting at guild, the GetState will decide to walk to bank
+      end;
+
+      END_SCRIPT:
+      begin
+        WriteLn('Script finished!');
+        Break;
+      end;
+    end;
+
+    Self.DoAntiban();
+  until Self.ShouldStop();
+end;
+
+var
+  CraftingGuildWalker: TCraftingGuildWalker;
+
+begin
+  CraftingGuildWalker.Run(WLSettings.MaxActions, WLSettings.MaxTime);
+end.
