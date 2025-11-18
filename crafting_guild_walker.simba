@@ -21,8 +21,8 @@ const
   WAIT_TIME: Int32 = 10000;           // How long to wait at each location (milliseconds)
 
   // Region to load - make sure it covers both your locations!
-  // Common regions: RSRegions.FALADOR, RSRegions.VARROCK, RSRegions.LUMBRIDGE, etc.
-  WALKER_REGION: TBox = [7051, 2796, 7750, 3300];  // RSRegions.FALADOR
+  // Expanded from RSRegions.FALADOR to include more space around Crafting Guild
+  WALKER_REGION: TBox = [6990, 2796, 7750, 3500];  // Extended FALADOR region
   // ============================================
 
 type
