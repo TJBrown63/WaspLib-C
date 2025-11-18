@@ -38,6 +38,7 @@ const
   // Human-like behavior settings
   RANDOM_CAMERA_MOVEMENT: Boolean = True;   // Occasionally move camera
   MISS_CLICK_CHANCE: Int32 = 5;             // 5% chance to miss click (0-100)
+  OFF_WINDOW_CLICK_CHANCE: Int32 = 3;       // 3% chance to click outside window (0-100)
   MIN_WAIT_AFTER_CLICK: Int32 = 800;        // Min wait after clicking rock (ms)
   MAX_WAIT_AFTER_CLICK: Int32 = 2000;       // Max wait after clicking rock (ms)
   // ========================================
@@ -147,6 +148,7 @@ begin
   WriteLn('Human-like Features:');
   WriteLn('  - Random camera movement: ', RANDOM_CAMERA_MOVEMENT);
   WriteLn('  - Miss-click chance: ', MISS_CLICK_CHANCE, '%');
+  WriteLn('  - Off-window click chance: ', OFF_WINDOW_CLICK_CHANCE, '%');
   WriteLn('  - Random mouse movement while mining');
   WriteLn('  - Variable timing between actions');
   WriteLn('  - Occasional right-click instead of left');
@@ -161,6 +163,29 @@ begin
 
   // Fallback: check for pixel movement in player area
   Result := SRL.GetPixelShift(MainScreen.GetPlayerBox(), 300) > 50;
+end;
+
+function TSimpleMiner.GetOffWindowPoint(): TPoint;
+var
+  clientBounds: TBox;
+  direction: Int32;
+begin
+  // Get the client window bounds
+  clientBounds := RSClient.Image().Bounds();
+
+  // Randomly choose a direction (0=left, 1=right, 2=top, 3=bottom)
+  direction := Random(4);
+
+  case direction of
+    0: // Click to the left of window
+      Result := [clientBounds.X1 - Random(50, 200), Random(clientBounds.Y1, clientBounds.Y2)];
+    1: // Click to the right of window
+      Result := [clientBounds.X2 + Random(50, 200), Random(clientBounds.Y1, clientBounds.Y2)];
+    2: // Click above window
+      Result := [Random(clientBounds.X1, clientBounds.X2), clientBounds.Y1 - Random(50, 200)];
+    3: // Click below window
+      Result := [Random(clientBounds.X1, clientBounds.X2), clientBounds.Y2 + Random(50, 200)];
+  end;
 end;
 
 function TSimpleMiner.ClickRock(): Boolean;
@@ -317,8 +342,18 @@ begin
 
       WAIT_MINING:
       begin
+        // Occasionally click outside the window (human behavior - clicking another app)
+        if Random(100) < OFF_WINDOW_CLICK_CHANCE then
+        begin
+          WriteLn('Simulating off-window click...');
+          Mouse.Move(Self.GetOffWindowPoint());
+          Wait(50, 150);
+          Mouse.Click(MOUSE_LEFT);
+          Wait(300, 800);
+          // Mouse should come back when we need to click rocks again
+        end
         // Occasionally move mouse while mining (human behavior)
-        if Random(100) < 20 then
+        else if Random(100) < 20 then
         begin
           // Move mouse to a random spot on screen
           if Random(2) = 0 then
