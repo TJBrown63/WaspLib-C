@@ -13,10 +13,11 @@
 
 const
   // ===== CONFIGURE YOUR COORDINATES HERE =====
-  LOCATION_A: TPoint = [7126, 3288];  // First location (Crafting Guild)
-  LOCATION_B: TPoint = [7172, 2972];  // Second location (Falador West Bank)
+  // Using WaspWeb graph nodes for reliable pathing
+  LOCATION_A: TPoint = [7128, 3289];  // Crafting Guild (graph node)
+  LOCATION_B: TPoint = [7177, 2976];  // Falador West Bank (graph node)
 
-  WALK_RADIUS: Int32 = 8;             // How close to get before considering "arrived" (smaller = more precise)
+  WALK_RADIUS: Int32 = 12;            // How close to get before considering "arrived"
   WAIT_TIME: Int32 = 10000;           // How long to wait at each location (milliseconds)
 
   // Region to load - make sure it covers both your locations!
@@ -47,6 +48,9 @@ begin
   // Use minimap walking instead of screen walking
   Self.RSW.ScreenWalk := False;
 
+  // Disable adaptive walk to prevent weird pathing
+  Self.RSW.AdaptiveWalk := False;
+
   WriteLn('=======================================');
   WriteLn('Simple Two-Point Walker');
   WriteLn('Location A: ', LOCATION_A.ToString());
@@ -71,15 +75,14 @@ begin
 
   WriteLn('[DEBUG] Current pos: ', currentPos.ToString(), ' | Dist to A: ', Round(distToA), ' | Dist to B: ', Round(distToB));
 
-  // Check if we're at Location B
-  if distToB < WALK_RADIUS then
+  // Use AtTile for more reliable position checking
+  if Self.RSW.AtTile(LOCATION_B, WALK_RADIUS) then
   begin
     WriteLn('Arrived at Location B: ', LOCATION_B.ToString());
     Exit(AT_B);
   end;
 
-  // Check if we're at Location A
-  if distToA < WALK_RADIUS then
+  if Self.RSW.AtTile(LOCATION_A, WALK_RADIUS) then
   begin
     WriteLn('Arrived at Location A: ', LOCATION_A.ToString());
     Exit(AT_A);
