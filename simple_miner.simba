@@ -178,8 +178,8 @@ begin
 
   WriteLn('Found ', Length(atpa), ' potential rock(s)');
 
-  // Sort by distance from player and try each one
-  atpa.SortFrom(MainScreen.Center());
+  // Try each rock cluster, starting with closest to center
+  atpa.SortByMiddle(MainScreen.Center());
 
   for tpa in atpa do
   begin
