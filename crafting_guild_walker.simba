@@ -16,8 +16,8 @@ const
   LOCATION_A: TPoint = [7128, 3289];  // First location (e.g., Crafting Guild)
   LOCATION_B: TPoint = [7177, 2976];  // Second location (e.g., Falador West Bank)
 
-  WALK_RADIUS: Int32 = 20;            // How close to get before considering "arrived"
-  WAIT_TIME: Int32 = 2000;            // How long to wait at each location (milliseconds)
+  WALK_RADIUS: Int32 = 5;             // How close to get before considering "arrived" (smaller = more precise)
+  WAIT_TIME: Int32 = 10000;           // How long to wait at each location (milliseconds)
 
   // Region to load - make sure it covers both your locations!
   // Common regions: RSRegions.FALADOR, RSRegions.VARROCK, RSRegions.LUMBRIDGE, etc.
