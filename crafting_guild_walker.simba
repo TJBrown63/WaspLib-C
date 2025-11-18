@@ -36,6 +36,7 @@ type
 
   TSimpleWalker = record(TBaseWalkerScript)
     State: EState;
+    SkipStateCheck: Boolean;
   end;
 
 procedure TSimpleWalker.Init(maxActions: UInt32; maxTime: UInt64); override;
@@ -99,9 +100,15 @@ end;
 procedure TSimpleWalker.Run(maxActions: UInt32; maxTime: UInt64);
 begin
   Self.Init(maxActions, maxTime);
+  Self.SkipStateCheck := False;
 
   repeat
-    Self.State := Self.GetState();
+    // Only check state if we haven't manually set it
+    if not Self.SkipStateCheck then
+      Self.State := Self.GetState()
+    else
+      Self.SkipStateCheck := False;
+
     Self.SetAction(ToStr(Self.State));
 
     case Self.State of
@@ -118,7 +125,7 @@ begin
         Wait(WAIT_TIME);
         // After waiting, force walk to B
         Self.State := WALK_TO_B;
-        Continue;
+        Self.SkipStateCheck := True;
       end;
 
       WALK_TO_B:
@@ -134,7 +141,7 @@ begin
         Wait(WAIT_TIME);
         // After waiting, force walk to A
         Self.State := WALK_TO_A;
-        Continue;
+        Self.SkipStateCheck := True;
       end;
 
       END_SCRIPT:
