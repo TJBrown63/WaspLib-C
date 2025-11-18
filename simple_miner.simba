@@ -193,7 +193,6 @@ var
   rockFinder: TRSObjectFinder;
   atpa: T2DPointArray;
   tpa: TPointArray;
-  rect: TRectangle;
   p: TPoint;
   missClick: Boolean;
 begin
@@ -233,8 +232,7 @@ begin
       Continue;
 
     // Get a random point within the rock area
-    rect := tpa.MinAreaRect();
-    p := rect.RandomPoint();  // Click random point instead of center
+    p := tpa[Random(0, High(tpa))];
 
     // Simulate occasional miss-clicks (human behavior)
     missClick := Random(100) < MISS_CLICK_CHANCE;
