@@ -355,9 +355,9 @@ begin
         begin
           // Move mouse to a random spot on screen
           if Random(2) = 0 then
-            Mouse.Move(SRL.RandomPoint(MainScreen.GetBounds()))
+            Mouse.Move(MainScreen.Bounds)
           else
-            Mouse.Move(SRL.RandomPoint(Inventory.GetSlotBox(Random(28))));
+            Mouse.Move(Inventory.GetSlotBox(Random(28)));
         end;
 
         Wait(800, 1500);  // Variable wait time
