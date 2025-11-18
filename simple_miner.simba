@@ -179,7 +179,7 @@ begin
   WriteLn('Found ', Length(atpa), ' potential rock(s)');
 
   // Try each rock cluster, starting with closest to center
-  atpa.SortByMiddle(MainScreen.Center());
+  atpa.SortByMiddle(MainScreen.Center);
 
   for tpa in atpa do
   begin
