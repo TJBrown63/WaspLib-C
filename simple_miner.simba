@@ -1,0 +1,202 @@
+{$DEFINE SCRIPT_ID := 'simple-miner'}
+{$DEFINE SCRIPT_REVISION := '1'}
+{$I SRL-T/osr.simba}
+{$I WaspLib/osr.simba}
+
+(*
+ * Simple Configurable Mining Script
+ *
+ * Configure which ore to mine below and the script will mine until inventory is full.
+ * Supports: Clay, Copper, Tin, Iron, Silver, Coal, Gold, Mithril, Adamantite, Runite,
+ *           Amethyst, Gem rocks, Sandstone, Granite
+ *)
+
+type
+  EOreType = (
+    ORE_CLAY,
+    ORE_COPPER,
+    ORE_TIN,
+    ORE_IRON,
+    ORE_SILVER,
+    ORE_COAL,
+    ORE_GOLD,
+    ORE_MITHRIL,
+    ORE_ADAMANTITE,
+    ORE_RUNITE,
+    ORE_AMETHYST,
+    ORE_GEM,
+    ORE_SANDSTONE,
+    ORE_GRANITE
+  );
+
+const
+  // ===== CONFIGURE YOUR MINING HERE =====
+  ORE_TO_MINE: EOreType = ORE_IRON;  // Change this to the ore you want to mine
+
+  POWER_MINING: Boolean = False;     // True = drop ores and keep mining, False = stop when full
+  // ========================================
+
+type
+  EState = (
+    CLICK_ROCK,
+    WAIT_MINING,
+    DROP_ORES,
+    INVENTORY_FULL,
+    END_SCRIPT
+  );
+
+  TSimpleMiner = record(TBaseScript)
+    State: EState;
+    CurrentRock: PRSObject;
+    IsMining: Boolean;
+  end;
+
+procedure TSimpleMiner.Init(maxActions: UInt32; maxTime: UInt64); override;
+begin
+  inherited;
+
+  // Select which rock object to use based on configuration
+  case ORE_TO_MINE of
+    ORE_CLAY:       Self.CurrentRock := @RSObjects.ClayRock;
+    ORE_COPPER:     Self.CurrentRock := @RSObjects.CopperRock;
+    ORE_TIN:        Self.CurrentRock := @RSObjects.TinRock;
+    ORE_IRON:       Self.CurrentRock := @RSObjects.IronRock;
+    ORE_SILVER:     Self.CurrentRock := @RSObjects.SilverRock;
+    ORE_COAL:       Self.CurrentRock := @RSObjects.CoalRock;
+    ORE_GOLD:       Self.CurrentRock := @RSObjects.GoldRock;
+    ORE_MITHRIL:    Self.CurrentRock := @RSObjects.MithrilRock;
+    ORE_ADAMANTITE: Self.CurrentRock := @RSObjects.AdamantiteRock;
+    ORE_RUNITE:     Self.CurrentRock := @RSObjects.RuniteRock;
+    ORE_AMETHYST:   Self.CurrentRock := @RSObjects.AmethystRock;
+    ORE_GEM:        Self.CurrentRock := @RSObjects.GemRock;
+    ORE_SANDSTONE:  Self.CurrentRock := @RSObjects.SandstoneRock;
+    ORE_GRANITE:    Self.CurrentRock := @RSObjects.GraniteRock;
+  end;
+
+  Self.IsMining := False;
+
+  WriteLn('=======================================');
+  WriteLn('Simple Mining Script');
+  WriteLn('Ore Type: ', ToStr(ORE_TO_MINE));
+  WriteLn('Power Mining: ', POWER_MINING);
+  WriteLn('=======================================');
+end;
+
+function TSimpleMiner.IsPlayerMining(): Boolean;
+begin
+  // Check if we gained XP (most reliable method)
+  if XPBar.EarnedXP() then
+    Exit(True);
+
+  // Fallback: check for pixel movement in player area
+  Result := SRL.GetPixelShift(MainScreen.GetPlayerBox(), 300) > 50;
+end;
+
+function TSimpleMiner.ClickRock(): Boolean;
+begin
+  WriteLn('Attempting to click rock...');
+
+  // Try to click the rock
+  if Self.CurrentRock^.Click() then
+  begin
+    WriteLn('Clicked rock successfully');
+    Wait(1000, 1500);
+    Self.IsMining := True;
+    Result := True;
+  end
+  else
+  begin
+    WriteLn('Failed to click rock');
+    Result := False;
+  end;
+end;
+
+function TSimpleMiner.GetState(): EState;
+begin
+  // Check if we should end
+  if WL.Activity.IsFinished() then
+    Exit(END_SCRIPT);
+
+  // Check if inventory is full
+  if Inventory.IsFull() then
+  begin
+    if POWER_MINING then
+      Exit(DROP_ORES)
+    else
+      Exit(INVENTORY_FULL);
+  end;
+
+  // Check if we're currently mining
+  if Self.IsMining then
+  begin
+    if Self.IsPlayerMining() then
+    begin
+      Exit(WAIT_MINING);
+    end
+    else
+    begin
+      WriteLn('Stopped mining - rock depleted or interrupted');
+      Self.IsMining := False;
+    end;
+  end;
+
+  // Need to click a rock
+  Exit(CLICK_ROCK);
+end;
+
+procedure TSimpleMiner.Run(maxActions: UInt32; maxTime: UInt64);
+begin
+  Self.Init(maxActions, maxTime);
+
+  repeat
+    Self.State := Self.GetState();
+    Self.SetAction(ToStr(Self.State));
+
+    case Self.State of
+      CLICK_ROCK:
+      begin
+        if not Self.ClickRock() then
+        begin
+          WriteLn('Rock not found or failed to click, waiting...');
+          Wait(500, 1000);
+        end;
+      end;
+
+      WAIT_MINING:
+      begin
+        Wait(500, 1000);
+        // Mining in progress
+      end;
+
+      DROP_ORES:
+      begin
+        WriteLn('Inventory full - dropping ores...');
+        Inventory.ShiftDrop(Inventory.GetUsedSlots(), DROP_PATTERN_SNAKE);
+        Wait(500, 1000);
+        Self.TotalActions := Self.TotalActions + 1;
+      end;
+
+      INVENTORY_FULL:
+      begin
+        WriteLn('Inventory is full! Stopping script.');
+        WriteLn('Total actions: ', Self.TotalActions);
+        Break;
+      end;
+
+      END_SCRIPT:
+      begin
+        WriteLn('Script finished!');
+        Break;
+      end;
+    end;
+
+    Self.DoAntiban();
+  until Self.ShouldStop();
+end;
+
+var
+  SimpleMiner: TSimpleMiner;
+
+begin
+  SimpleMiner.Run(WLSettings.MaxActions, WLSettings.MaxTime);
+end.
