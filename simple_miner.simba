@@ -47,7 +47,8 @@ type
 
   TSimpleMiner = record(TBaseScript)
     State: EState;
-    CurrentRock: PRSObject;
+    RockColor: TCTS2Color;
+    RockUpText: String;
     IsMining: Boolean;
   end;
 
@@ -55,22 +56,79 @@ procedure TSimpleMiner.Init(maxActions: UInt32; maxTime: UInt64); override;
 begin
   inherited;
 
-  // Select which rock object to use based on configuration
+  // Set rock color and uptext based on ore type
+  // Colors are taken from the library's rock definitions
   case ORE_TO_MINE of
-    ORE_CLAY:       Self.CurrentRock := @RSObjects.ClayRock;
-    ORE_COPPER:     Self.CurrentRock := @RSObjects.CopperRock;
-    ORE_TIN:        Self.CurrentRock := @RSObjects.TinRock;
-    ORE_IRON:       Self.CurrentRock := @RSObjects.IronRock;
-    ORE_SILVER:     Self.CurrentRock := @RSObjects.SilverRock;
-    ORE_COAL:       Self.CurrentRock := @RSObjects.CoalRock;
-    ORE_GOLD:       Self.CurrentRock := @RSObjects.GoldRock;
-    ORE_MITHRIL:    Self.CurrentRock := @RSObjects.MithrilRock;
-    ORE_ADAMANTITE: Self.CurrentRock := @RSObjects.AdamantiteRock;
-    ORE_RUNITE:     Self.CurrentRock := @RSObjects.RuniteRock;
-    ORE_AMETHYST:   Self.CurrentRock := @RSObjects.AmethystRock;
-    ORE_GEM:        Self.CurrentRock := @RSObjects.GemRock;
-    ORE_SANDSTONE:  Self.CurrentRock := @RSObjects.SandstoneRock;
-    ORE_GRANITE:    Self.CurrentRock := @RSObjects.GraniteRock;
+    ORE_CLAY:
+    begin
+      Self.RockColor := CTS2(7506796, 15, 0.13, 0.42);
+      Self.RockUpText := 'Clay';
+    end;
+    ORE_COPPER:
+    begin
+      Self.RockColor := CTS2(4878743, 10, 0.06, 0.38);
+      Self.RockUpText := 'Copper';
+    end;
+    ORE_TIN:
+    begin
+      Self.RockColor := CTS2(5131143, 7, 0.03, 0.23);
+      Self.RockUpText := 'Tin';
+    end;
+    ORE_IRON:
+    begin
+      Self.RockColor := CTS2(2240329, 11, 0.12, 0.60);
+      Self.RockUpText := 'Iron';
+    end;
+    ORE_SILVER:
+    begin
+      Self.RockColor := CTS2(6975567, 13, 0.06, 0.21);
+      Self.RockUpText := 'Silver';
+    end;
+    ORE_COAL:
+    begin
+      Self.RockColor := CTS2(2568501, 7, 0.05, 0.28);
+      Self.RockUpText := 'Coal';
+    end;
+    ORE_GOLD:
+    begin
+      Self.RockColor := CTS2(4552849, 8, 0.34, 1.02);
+      Self.RockUpText := 'Gold';
+    end;
+    ORE_MITHRIL:
+    begin
+      Self.RockColor := CTS2(4151374, 10, 0.04, 0.29);
+      Self.RockUpText := 'Mithril';
+    end;
+    ORE_ADAMANTITE:
+    begin
+      Self.RockColor := CTS2(5328219, 10, 0.07, 0.13);
+      Self.RockUpText := 'Adamantite';
+    end;
+    ORE_RUNITE:
+    begin
+      Self.RockColor := CTS2(4022103, 12, 0.07, 0.20);
+      Self.RockUpText := 'Runite';
+    end;
+    ORE_AMETHYST:
+    begin
+      Self.RockColor := CTS2(5516609, 22, 0.20, 0.08);
+      Self.RockUpText := 'Amethyst';
+    end;
+    ORE_GEM:
+    begin
+      Self.RockColor := CTS2(4419685, 16, 0.05, 0.38);
+      Self.RockUpText := 'Gem';
+    end;
+    ORE_SANDSTONE:
+    begin
+      Self.RockColor := CTS2(7442272, 11, 0.08, 0.15);
+      Self.RockUpText := 'Sandstone';
+    end;
+    ORE_GRANITE:
+    begin
+      Self.RockColor := CTS2(6585449, 8, 0.09, 0.46);
+      Self.RockUpText := 'Granite';
+    end;
   end;
 
   Self.IsMining := False;
@@ -78,6 +136,7 @@ begin
   WriteLn('=======================================');
   WriteLn('Simple Mining Script');
   WriteLn('Ore Type: ', ToStr(ORE_TO_MINE));
+  WriteLn('Looking for: ', Self.RockUpText);
   WriteLn('Power Mining: ', POWER_MINING);
   WriteLn('=======================================');
 end;
@@ -93,22 +152,65 @@ begin
 end;
 
 function TSimpleMiner.ClickRock(): Boolean;
+var
+  rockFinder: TRSObjectFinder;
+  atpa: T2DPointArray;
+  tpa: TPointArray;
+  rect: TRectangle;
+  p: TPoint;
 begin
-  WriteLn('Attempting to click rock...');
+  WriteLn('Searching for ', Self.RockUpText, ' rock on screen...');
 
-  // Try to click the rock
-  if Self.CurrentRock^.Click() then
+  // Setup the finder to search for our rock color
+  rockFinder.Colors += Self.RockColor;
+  rockFinder.ClusterDistance := 5;
+  rockFinder.Erode := 2;
+  rockFinder.Grow := 3;
+
+  // Find rocks on mainscreen
+  atpa := MainScreen.FindObject(rockFinder);
+
+  if Length(atpa) = 0 then
   begin
-    WriteLn('Clicked rock successfully');
-    Wait(1000, 1500);
-    Self.IsMining := True;
-    Result := True;
-  end
-  else
-  begin
-    WriteLn('Failed to click rock');
-    Result := False;
+    WriteLn('No rocks found on screen');
+    Exit(False);
   end;
+
+  WriteLn('Found ', Length(atpa), ' potential rock(s)');
+
+  // Sort by distance from player and try each one
+  atpa.SortFrom(MainScreen.Center());
+
+  for tpa in atpa do
+  begin
+    if Length(tpa) < 10 then  // Skip tiny clusters
+      Continue;
+
+    // Get a point to hover over
+    rect := tpa.MinAreaRect();
+    p := rect.Mean();
+
+    // Move mouse to the rock
+    Mouse.Move(p);
+
+    // Check uptext to verify it's the right rock
+    if MainScreen.IsUpText(Self.RockUpText, 250) then
+    begin
+      WriteLn('Found correct rock, clicking...');
+      Mouse.Click(MOUSE_LEFT);
+
+      if MainScreen.DidRedClick() then
+      begin
+        WriteLn('Successfully clicked rock');
+        Wait(1000, 1500);
+        Self.IsMining := True;
+        Exit(True);
+      end;
+    end;
+  end;
+
+  WriteLn('Could not find/click valid rock');
+  Result := False;
 end;
 
 function TSimpleMiner.GetState(): EState;
