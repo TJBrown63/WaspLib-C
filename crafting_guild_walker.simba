@@ -16,7 +16,7 @@ const
   LOCATION_A: TPoint = [7128, 3289];  // First location (e.g., Crafting Guild)
   LOCATION_B: TPoint = [7177, 2976];  // Second location (e.g., Falador West Bank)
 
-  WALK_RADIUS: Int32 = 5;             // How close to get before considering "arrived" (smaller = more precise)
+  WALK_RADIUS: Int32 = 8;             // How close to get before considering "arrived" (smaller = more precise)
   WAIT_TIME: Int32 = 10000;           // How long to wait at each location (milliseconds)
 
   // Region to load - make sure it covers both your locations!
@@ -59,22 +59,27 @@ end;
 function TSimpleWalker.GetState(): EState;
 var
   currentPos: TPoint;
+  distToA, distToB: Double;
 begin
   // Check if we should end the script
   if WL.Activity.IsFinished() then
     Exit(END_SCRIPT);
 
   currentPos := Self.RSW.GetMyPos();
+  distToA := currentPos.DistanceTo(LOCATION_A);
+  distToB := currentPos.DistanceTo(LOCATION_B);
+
+  WriteLn('[DEBUG] Current pos: ', currentPos.ToString(), ' | Dist to A: ', Round(distToA), ' | Dist to B: ', Round(distToB));
 
   // Check if we're at Location B
-  if currentPos.DistanceTo(LOCATION_B) < WALK_RADIUS then
+  if distToB < WALK_RADIUS then
   begin
     WriteLn('Arrived at Location B: ', LOCATION_B.ToString());
     Exit(AT_B);
   end;
 
   // Check if we're at Location A
-  if currentPos.DistanceTo(LOCATION_A) < WALK_RADIUS then
+  if distToA < WALK_RADIUS then
   begin
     WriteLn('Arrived at Location A: ', LOCATION_A.ToString());
     Exit(AT_A);
@@ -82,7 +87,7 @@ begin
 
   // Determine where to walk based on current position
   // Walk to whichever location is farther away
-  if currentPos.DistanceTo(LOCATION_B) < currentPos.DistanceTo(LOCATION_A) then
+  if distToB < distToA then
     Exit(WALK_TO_A)
   else
     Exit(WALK_TO_B);
