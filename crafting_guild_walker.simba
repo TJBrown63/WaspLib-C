@@ -44,11 +44,15 @@ begin
   // Setup the walker with your configured region
   Self.RSW.SetupRegion(WALKER_REGION);
 
+  // Use minimap walking instead of screen walking
+  Self.RSW.ScreenWalk := False;
+
   WriteLn('=======================================');
   WriteLn('Simple Two-Point Walker');
   WriteLn('Location A: ', LOCATION_A.ToString());
   WriteLn('Location B: ', LOCATION_B.ToString());
   WriteLn('Walk Radius: ', WALK_RADIUS, ' pixels');
+  WriteLn('Using: Minimap walking');
   WriteLn('=======================================');
 end;
 
