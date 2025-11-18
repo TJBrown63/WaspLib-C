@@ -108,6 +108,9 @@ begin
       begin
         WriteLn('At Location A. Waiting ', WAIT_TIME, 'ms...');
         Wait(WAIT_TIME);
+        // After waiting, force walk to B
+        Self.State := WALK_TO_B;
+        Continue;
       end;
 
       WALK_TO_B:
@@ -121,6 +124,9 @@ begin
       begin
         WriteLn('At Location B. Waiting ', WAIT_TIME, 'ms...');
         Wait(WAIT_TIME);
+        // After waiting, force walk to A
+        Self.State := WALK_TO_A;
+        Continue;
       end;
 
       END_SCRIPT:
