@@ -31,7 +31,8 @@ begin
   inherited;
 
   // Setup the Falador region for the walker
-  Map.SetupChunk(ERSChunk.FALADOR);
+  // Both Crafting Guild and Falador banks are within this region
+  Self.RSW.SetupRegion(RSRegions.FALADOR);
 
   WriteLn('Starting Crafting Guild <-> Falador Bank Walker');
   WriteLn('Will walk between Crafting Guild and Falador West Bank');
