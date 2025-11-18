@@ -13,8 +13,8 @@
 
 const
   // ===== CONFIGURE YOUR COORDINATES HERE =====
-  LOCATION_A: TPoint = [7128, 3289];  // First location (e.g., Crafting Guild)
-  LOCATION_B: TPoint = [7177, 2976];  // Second location (e.g., Falador West Bank)
+  LOCATION_A: TPoint = [7126, 3288];  // First location (Crafting Guild)
+  LOCATION_B: TPoint = [7172, 2972];  // Second location (Falador West Bank)
 
   WALK_RADIUS: Int32 = 8;             // How close to get before considering "arrived" (smaller = more precise)
   WAIT_TIME: Int32 = 10000;           // How long to wait at each location (milliseconds)
