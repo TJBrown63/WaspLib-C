@@ -1,44 +1,58 @@
-{$DEFINE SCRIPT_ID := 'crafting-guild-walker'}
+{$DEFINE SCRIPT_ID := 'simple-walker'}
 {$DEFINE SCRIPT_REVISION := '1'}
 {$I SRL-T/osr.simba}
 {$I WaspLib/osr.simba}
 
 (*
- * Simple Wasp Script - Crafting Guild to Falador Bank Walker
+ * Simple Two-Point Walker
  *
- * This script demonstrates basic pathfinding between two locations:
- * - Crafting Guild: [7128, 3289]
- * - Falador West Bank: [7177, 2976]
- *
- * The script will walk back and forth between these locations.
+ * Configure your coordinates below and the script will walk back and forth.
+ * To find coordinates, use the built-in WaspLib position finder or check the
+ * waspweb.graph file for known locations.
  *)
+
+const
+  // ===== CONFIGURE YOUR COORDINATES HERE =====
+  LOCATION_A: TPoint = [7128, 3289];  // First location (e.g., Crafting Guild)
+  LOCATION_B: TPoint = [7177, 2976];  // Second location (e.g., Falador West Bank)
+
+  WALK_RADIUS: Int32 = 20;            // How close to get before considering "arrived"
+  WAIT_TIME: Int32 = 2000;            // How long to wait at each location (milliseconds)
+
+  // Region to load - make sure it covers both your locations!
+  // Common regions: RSRegions.FALADOR, RSRegions.VARROCK, RSRegions.LUMBRIDGE, etc.
+  WALKER_REGION: TBox = [7051, 2796, 7750, 3300];  // RSRegions.FALADOR
+  // ============================================
 
 type
   EState = (
-    WALK_TO_BANK,
-    AT_BANK,
-    WALK_TO_GUILD,
-    AT_GUILD,
+    WALK_TO_A,
+    AT_A,
+    WALK_TO_B,
+    AT_B,
     END_SCRIPT
   );
 
-  TCraftingGuildWalker = record(TBaseWalkerScript)
+  TSimpleWalker = record(TBaseWalkerScript)
     State: EState;
   end;
 
-procedure TCraftingGuildWalker.Init(maxActions: UInt32; maxTime: UInt64); override;
+procedure TSimpleWalker.Init(maxActions: UInt32; maxTime: UInt64); override;
 begin
   inherited;
 
-  // Setup the Falador region for the walker
-  // Both Crafting Guild and Falador banks are within this region
-  Self.RSW.SetupRegion(RSRegions.FALADOR);
+  // Setup the walker with your configured region
+  Self.RSW.SetupRegion(WALKER_REGION);
 
-  WriteLn('Starting Crafting Guild <-> Falador Bank Walker');
-  WriteLn('Will walk between Crafting Guild and Falador West Bank');
+  WriteLn('=======================================');
+  WriteLn('Simple Two-Point Walker');
+  WriteLn('Location A: ', LOCATION_A.ToString());
+  WriteLn('Location B: ', LOCATION_B.ToString());
+  WriteLn('Walk Radius: ', WALK_RADIUS, ' pixels');
+  WriteLn('=======================================');
 end;
 
-function TCraftingGuildWalker.GetState(): EState;
+function TSimpleWalker.GetState(): EState;
 var
   currentPos: TPoint;
 begin
@@ -48,30 +62,29 @@ begin
 
   currentPos := Self.RSW.GetMyPos();
 
-  // Check if we're at the bank (within 20 pixels)
-  if currentPos.DistanceTo([7177, 2976]) < 20 then
+  // Check if we're at Location B
+  if currentPos.DistanceTo(LOCATION_B) < WALK_RADIUS then
   begin
-    WriteLn('Arrived at Falador West Bank!');
-    Exit(AT_BANK);
+    WriteLn('Arrived at Location B: ', LOCATION_B.ToString());
+    Exit(AT_B);
   end;
 
-  // Check if we're at the crafting guild (within 20 pixels)
-  if currentPos.DistanceTo([7128, 3289]) < 20 then
+  // Check if we're at Location A
+  if currentPos.DistanceTo(LOCATION_A) < WALK_RADIUS then
   begin
-    WriteLn('Arrived at Crafting Guild!');
-    Exit(AT_GUILD);
+    WriteLn('Arrived at Location A: ', LOCATION_A.ToString());
+    Exit(AT_A);
   end;
 
   // Determine where to walk based on current position
-  // If closer to bank, we must have just come from guild, so go back to guild
-  // If closer to guild, we must have just come from bank, so go back to bank
-  if currentPos.DistanceTo([7177, 2976]) < currentPos.DistanceTo([7128, 3289]) then
-    Exit(WALK_TO_GUILD)
+  // Walk to whichever location is farther away
+  if currentPos.DistanceTo(LOCATION_B) < currentPos.DistanceTo(LOCATION_A) then
+    Exit(WALK_TO_A)
   else
-    Exit(WALK_TO_BANK);
+    Exit(WALK_TO_B);
 end;
 
-procedure TCraftingGuildWalker.Run(maxActions: UInt32; maxTime: UInt64);
+procedure TSimpleWalker.Run(maxActions: UInt32; maxTime: UInt64);
 begin
   Self.Init(maxActions, maxTime);
 
@@ -80,32 +93,30 @@ begin
     Self.SetAction(ToStr(Self.State));
 
     case Self.State of
-      WALK_TO_BANK:
+      WALK_TO_A:
       begin
-        WriteLn('Walking to Falador West Bank...');
-        Self.RSW.WebWalk([7177, 2976], 20);
+        WriteLn('Walking to Location A: ', LOCATION_A.ToString());
+        Self.RSW.WebWalk(LOCATION_A, WALK_RADIUS);
         Self.TotalActions := Self.TotalActions + 1;
       end;
 
-      AT_BANK:
+      AT_A:
       begin
-        WriteLn('At bank! Waiting 2 seconds...');
-        Wait(2000);
-        // After waiting at bank, the GetState will decide to walk to guild
+        WriteLn('At Location A. Waiting ', WAIT_TIME, 'ms...');
+        Wait(WAIT_TIME);
       end;
 
-      WALK_TO_GUILD:
+      WALK_TO_B:
       begin
-        WriteLn('Walking to Crafting Guild...');
-        Self.RSW.WebWalk([7128, 3289], 20);
+        WriteLn('Walking to Location B: ', LOCATION_B.ToString());
+        Self.RSW.WebWalk(LOCATION_B, WALK_RADIUS);
         Self.TotalActions := Self.TotalActions + 1;
       end;
 
-      AT_GUILD:
+      AT_B:
       begin
-        WriteLn('At Crafting Guild! Waiting 2 seconds...');
-        Wait(2000);
-        // After waiting at guild, the GetState will decide to walk to bank
+        WriteLn('At Location B. Waiting ', WAIT_TIME, 'ms...');
+        Wait(WAIT_TIME);
       end;
 
       END_SCRIPT:
@@ -120,8 +131,8 @@ begin
 end;
 
 var
-  CraftingGuildWalker: TCraftingGuildWalker;
+  SimpleWalker: TSimpleWalker;
 
 begin
-  CraftingGuildWalker.Run(WLSettings.MaxActions, WLSettings.MaxTime);
+  SimpleWalker.Run(WLSettings.MaxActions, WLSettings.MaxTime);
 end.
