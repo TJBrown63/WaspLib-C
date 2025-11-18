@@ -203,7 +203,7 @@ begin
   if RANDOM_CAMERA_MOVEMENT and (Random(100) < 15) then
   begin
     WriteLn('Moving camera slightly...');
-    Mouse.Move(Minimap.GetCompassCircle().RandomPoint());
+    Minimap.SetCompassAngle(Minimap.GetCompassAngle() + Random(-15, 15));
     Wait(50, 200);
   end;
 
