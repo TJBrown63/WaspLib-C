@@ -34,6 +34,12 @@ const
   ORE_TO_MINE: EOreType = ORE_IRON;  // Change this to the ore you want to mine
 
   POWER_MINING: Boolean = False;     // True = drop ores and keep mining, False = stop when full
+
+  // Human-like behavior settings
+  RANDOM_CAMERA_MOVEMENT: Boolean = True;   // Occasionally move camera
+  MISS_CLICK_CHANCE: Int32 = 5;             // 5% chance to miss click (0-100)
+  MIN_WAIT_AFTER_CLICK: Int32 = 800;        // Min wait after clicking rock (ms)
+  MAX_WAIT_AFTER_CLICK: Int32 = 2000;       // Max wait after clicking rock (ms)
   // ========================================
 
 type
@@ -138,6 +144,12 @@ begin
   WriteLn('Ore Type: ', ToStr(ORE_TO_MINE));
   WriteLn('Looking for: ', Self.RockUpText);
   WriteLn('Power Mining: ', POWER_MINING);
+  WriteLn('Human-like Features:');
+  WriteLn('  - Random camera movement: ', RANDOM_CAMERA_MOVEMENT);
+  WriteLn('  - Miss-click chance: ', MISS_CLICK_CHANCE, '%');
+  WriteLn('  - Random mouse movement while mining');
+  WriteLn('  - Variable timing between actions');
+  WriteLn('  - Occasional right-click instead of left');
   WriteLn('=======================================');
 end;
 
@@ -158,8 +170,17 @@ var
   tpa: TPointArray;
   rect: TRectangle;
   p: TPoint;
+  missClick: Boolean;
 begin
   WriteLn('Searching for ', Self.RockUpText, ' rock on screen...');
+
+  // Occasionally move camera for human-like behavior
+  if RANDOM_CAMERA_MOVEMENT and (Random(100) < 15) then
+  begin
+    WriteLn('Moving camera slightly...');
+    Mouse.Move(Minimap.GetCompassCircle().RandomPoint());
+    Wait(50, 200);
+  end;
 
   // Setup the finder to search for our rock color
   rockFinder.Colors += Self.RockColor;
@@ -190,22 +211,52 @@ begin
     rect := tpa.MinAreaRect();
     p := rect.RandomPoint();  // Click random point instead of center
 
-    // Move mouse to the rock
+    // Simulate occasional miss-clicks (human behavior)
+    missClick := Random(100) < MISS_CLICK_CHANCE;
+    if missClick then
+    begin
+      // Click near the rock but not quite on it
+      p := p.Random(-15, 15);
+      WriteLn('Simulating miss-click...');
+    end;
+
+    // Move mouse to the rock (with natural movement)
     Mouse.Move(p);
+
+    // Random small wait before checking uptext
+    Wait(50, 150);
 
     // Check uptext to verify it's the right rock
     if MainScreen.IsUpText(Self.RockUpText, 250) then
     begin
       WriteLn('Found correct rock, clicking...');
-      Mouse.Click(MOUSE_LEFT);
+
+      // Sometimes right-click then select option instead of left-click
+      if Random(100) < 10 then
+      begin
+        Mouse.Click(MOUSE_RIGHT);
+        Wait(100, 300);
+        if ChooseOption.Select('Mine') then
+          WriteLn('Selected Mine option from menu');
+      end
+      else
+        Mouse.Click(MOUSE_LEFT);
 
       if MainScreen.DidRedClick() then
       begin
         WriteLn('Successfully clicked rock');
-        Wait(1000, 1500);
+        // Variable wait time after clicking (more human-like)
+        Wait(MIN_WAIT_AFTER_CLICK, MAX_WAIT_AFTER_CLICK);
         Self.IsMining := True;
         Exit(True);
       end;
+    end
+    else if missClick then
+    begin
+      // We missed on purpose, try again
+      WriteLn('Miss-click - trying again...');
+      Wait(200, 500);
+      Continue;
     end;
   end;
 
@@ -266,7 +317,17 @@ begin
 
       WAIT_MINING:
       begin
-        Wait(500, 1000);
+        // Occasionally move mouse while mining (human behavior)
+        if Random(100) < 20 then
+        begin
+          // Move mouse to a random spot on screen
+          if Random(2) = 0 then
+            Mouse.Move(MainScreen.GetBounds().RandomPoint())
+          else
+            Mouse.Move(Inventory.GetSlotBox(Random(28)).RandomPoint());
+        end;
+
+        Wait(800, 1500);  // Variable wait time
         // Mining in progress
       end;
 
