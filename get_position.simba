@@ -1,0 +1,26 @@
+{$I SRL-T/osr.simba}
+{$I WaspLib/osr.simba}
+
+(*
+ * Position Finder Script
+ *
+ * Run this script while logged in and it will print your current coordinates.
+ * Use these coordinates to configure the walker script.
+ *)
+
+var
+  RSW: TRSWalker;
+
+begin
+  // Setup walker
+  RSW.Setup();
+
+  // Print current position
+  WriteLn('=======================================');
+  WriteLn('Your current position:');
+  WriteLn(RSW.GetMyPos().ToString());
+  WriteLn('=======================================');
+  WriteLn('');
+  WriteLn('Copy this coordinate and use it in the walker script!');
+  WriteLn('Format: [X, Y]');
+end.
